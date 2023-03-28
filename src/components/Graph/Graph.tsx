@@ -1,63 +1,69 @@
 import styled from "styled-components";
 import cytoscape from "cytoscape";
-import {Component, Fragment} from "react";
-import {v4 as uuid} from "uuid";
-import {Button} from "react-bootstrap";
+import { useEffect, useRef, useState } from "react";
+import { v4 as uuid } from "uuid";
+import { Button } from "react-bootstrap";
 
-const StyledGraphWrapper = styled.div`{
+const StyledGraphWrapper = styled.div`
   height: 70%;
   width: 70%;
   background-color: grey;
-}`;
+`;
 
-class Graph extends Component<{},{addNode: boolean, connectEdge: boolean, cy: cytoscape.Core}>{
-  constructor(props: any) {
-    super(props);
-    this.state = {
-      addNode: false,
-      connectEdge: false,
-      cy: cytoscape(),
-    };
-  }
+export default function Graph() {
+  const [controls, setControls] = useState({
+    isAddEnabled: false,
+    shouldConnectEdge: false,
+  });
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const cyRef = useRef<any>(null);
 
-  onCanvasClick = (e: React.MouseEvent<HTMLDivElement>) => {
+  useEffect(() => {
+    cyRef.current = cytoscape({ container: wrapperRef.current });
+  }, []);
+
+  const onCanvasClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const position = { x: e.clientX, y: e.clientY };
     // const button = e.button
-    if(this.state.addNode) {
+    if (controls.isAddEnabled) {
       console.log("Adding node at position", position);
 
-      this.state.cy.add([
-        {group: "nodes", data: {id: uuid()}, renderedPosition: position},
+      cyRef.current.add([
+        { group: "nodes", data: { id: uuid() }, renderedPosition: position },
       ]);
     }
   };
 
-  onAddNodeClick = () => {
-    console.log("Button Add Node Clicked!");
-    this.setState({addNode: !this.state.addNode});
-  }
+  const onConnectClick = () =>
+    setControls((controls) => ({
+      isAddEnabled: false,
+      shouldConnectEdge: !controls.shouldConnectEdge,
+    }));
 
-  onConnectEdgeClick = () => {
-    console.log("Button Connect Edge Clicked!");
-    this.setState({addNode: false, connectEdge: !this.state.connectEdge});
-  }
+  const onAddClick = () =>
+    setControls((controls) => ({
+      ...controls,
+      isAddEnabled: !controls.isAddEnabled,
+    }));
 
-  render() {
-    return (
-        <Fragment>
-          <StyledGraphWrapper id="cy" onClick={this.onCanvasClick}/>
-          <div>
-          <Button onClick={this.onAddNodeClick} style={{color: this.state.addNode ? "#00F" : "#F00"}}>
-            Add Node
-          </Button>
-          <Button onClick={this.onConnectEdgeClick} style={{color: this.state.connectEdge ? "#00F" : "#F00"}}>
-            Connect Edge
-          </Button>
-          </div>
-          <h1>Graph-GUI</h1>
-        </Fragment>
-    );
-  }
-
+  return (
+    <>
+      <StyledGraphWrapper ref={wrapperRef} id="cy" onClick={onCanvasClick} />
+      <div>
+        <Button
+          onClick={onAddClick}
+          style={{ color: controls.isAddEnabled ? "#00F" : "#F00" }}
+        >
+          Add Node
+        </Button>
+        <Button
+          onClick={onConnectClick}
+          style={{ color: controls.shouldConnectEdge ? "#00F" : "#F00" }}
+        >
+          Connect Edge
+        </Button>
+      </div>
+      <h1>Graph-GUI</h1>
+    </>
+  );
 }
-export default Graph
