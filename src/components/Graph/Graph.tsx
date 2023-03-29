@@ -15,7 +15,10 @@ export default function Graph() {
     isAddEnabled: false,
     shouldConnectEdge: false,
   });
-  const [latestVertexID, setLatestVertexID] = useState<number>(1);
+  const [latestIDs, setLatestIDs] = useState({
+    latestVertexID: 1,
+    latestEdgeID: 1,
+  });
   const wrapperRef = useRef<HTMLDivElement>(null);
   const cyRef = useRef<any>(null);
 
@@ -41,25 +44,54 @@ export default function Graph() {
     }
     else if (button === 0 && controls.isAddEnabled) {
       console.log("Adding node at position", position);
-      setLatestVertexID(latestVertexID+1)
+      setLatestIDs({...latestIDs, latestVertexID: latestIDs.latestVertexID+1})
       cyRef.current.add([
-        { group: "nodes", data: { id: latestVertexID }, renderedPosition: position },
+        { group: "nodes", data: { id: "v" + latestIDs.latestVertexID }, renderedPosition: position },
       ]);
-      console.log("Current nodes list: ", cyRef.current.nodes().map((e: { id: () => any; })=>e.id()))
+      console.log("Current nodes list: ", cyRef.current.nodes().map((ele: { id: () => any; })=>ele.id()))
     }
   };
 
-  const onConnectClick = () =>
-    setControls((controls) => ({
-      isAddEnabled: false,
-      shouldConnectEdge: !controls.shouldConnectEdge,
-    }));
+  const onConnectClick = () => {
+    const selectedNodes = cyRef.current.$(':selected');
+    // If more than or less than two nodes are selected, ignore user input
+    if (selectedNodes.length !== 2) {
+      console.log("Invalid many nodes selected for connection, ignoring");
+    }
+    // If exactly two nodes are in selected state, join them via an edge
+    else {
+      const selectedNodesIDs = selectedNodes.jsons().map((ele: { [x: string]: { [x: string]: any; }; }) =>
+          ele["data"]["id"]);
+      console.log("Adding edge between vertices", selectedNodesIDs)
+      setLatestIDs({...latestIDs, latestEdgeID: latestIDs.latestEdgeID + 1})
+      cyRef.current.add([
+        {group: "edges", data: {id: "e" + latestIDs.latestEdgeID, source: selectedNodesIDs[0], target: selectedNodesIDs[1]}}
+      ])
+      // Unselect after adding edge
+      selectedNodes.unselect();
+      setControls({
+        isAddEnabled: false,
+        shouldConnectEdge: false,
+      });
+    }
+  }
+
 
   const onAddClick = () =>
     setControls((controls) => ({
       isAddEnabled: !controls.isAddEnabled,
       shouldConnectEdge: false,
     }));
+
+  const onDeleteClick = () => {
+    const selectedObjects = cyRef.current.$(':selected');
+    console.log(selectedObjects);
+    selectedObjects.remove();
+    console.log("Deleted Objects", selectedObjects.jsons().map((ele: { [x: string]: { [x: string]: any; }; }) =>
+                                                            ele["data"]["id"])
+    )
+  }
+
 
   return (
     <>
@@ -75,7 +107,13 @@ export default function Graph() {
           onClick={onConnectClick}
           style={{ color: controls.shouldConnectEdge ? "#00F" : "#F00" }}
         >
-          Connect Edge
+          Connect Two Selected Nodes
+        </Button>
+        <Button
+          onClick={onDeleteClick}
+          style={{color: "#F00"}}
+        >
+          Delete Selected Nodes/Edges
         </Button>
       </div>
       <h1>Graph-GUI</h1>
